@@ -28,7 +28,7 @@ npm uninstall @modelcontextprotocol/sdk
 | Server + Express      | `npm install @modelcontextprotocol/server @modelcontextprotocol/express` |
 | Server + Hono         | `npm install @modelcontextprotocol/server @modelcontextprotocol/hono`    |
 
-`@modelcontextprotocol/core` is installed automatically as a dependency.
+`@modelcontextprotocol/core` is an internal package — never install or import it directly. Both `@modelcontextprotocol/client` and `@modelcontextprotocol/server` re-export everything you need.
 
 ## 3. Import Mapping
 
@@ -373,6 +373,9 @@ Schema to method string mapping:
 | `PromptListChangedNotificationSchema`   | `'notifications/prompts/list_changed'`   |
 | `ProgressNotificationSchema`            | `'notifications/progress'`               |
 | `CancelledNotificationSchema`           | `'notifications/cancelled'`              |
+| `GetTaskRequestSchema`                  | `'tasks/get'`                            |
+| `GetTaskPayloadRequestSchema`           | `'tasks/result'`                         |
+| `ElicitationCompleteNotificationSchema` | `'notifications/elicitation/complete'`   |
 | `InitializedNotificationSchema`         | `'notifications/initialized'`            |
 
 Request/notification params remain fully typed. Remove unused schema imports after migration.
@@ -407,9 +410,9 @@ Request/notification params remain fully typed. Remove unused schema imports aft
 | `ctx.mcpReq.elicitInput(params, options?)`     | Elicit user input (form or URL)                        | `server.elicitInput(...)` from within handler        |
 | `ctx.mcpReq.requestSampling(params, options?)` | Request LLM sampling from client                       | `server.createMessage(...)` from within handler      |
 
-## 11. Schema parameter removed from `request()`, `send()`, and `callTool()`
+## 11. Schema parameter removed from `request()`, `send()`, `callTool()`, and `callToolStream()`
 
-`Protocol.request()`, `BaseContext.mcpReq.send()`, and `Client.callTool()` no longer take a Zod result schema argument. The SDK resolves the schema internally from the method name.
+`Protocol.request()`, `BaseContext.mcpReq.send()`, `Client.callTool()`, and `client.experimental.tasks.callToolStream()` no longer take a Zod result schema argument. The SDK resolves the schema internally from the method name.
 
 ```typescript
 // v1: schema required
@@ -428,6 +431,7 @@ const tool = await client.callTool({ name: 'my-tool', arguments: {} });
 | ------------------------------------------------------------ | ---------------------------------- |
 | `client.request(req, ResultSchema)`                          | `client.request(req)`              |
 | `client.request(req, ResultSchema, options)`                 | `client.request(req, options)`     |
+| `client.experimental.tasks.callToolStream(params, ResultSchema, options?)` | `client.experimental.tasks.callToolStream(params, options?)` |
 | `ctx.mcpReq.send(req, ResultSchema)`                         | `ctx.mcpReq.send(req)`             |
 | `ctx.mcpReq.send(req, ResultSchema, options)`                | `ctx.mcpReq.send(req, options)`    |
 | `client.callTool(params, CompatibilityCallToolResultSchema)` | `client.callTool(params)`          |

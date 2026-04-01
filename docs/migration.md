@@ -110,6 +110,36 @@ const transport = new NodeStreamableHTTPServerTransport({ sessionIdGenerator: ()
 
 The SSE transport has been removed from the server. Servers should migrate to Streamable HTTP. The client-side SSE transport remains available for connecting to legacy SSE servers.
 
+**Before (v1):**
+
+```typescript
+import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+
+let transport: SSEServerTransport;
+
+app.get('/sse', async (req, res) => {
+    transport = new SSEServerTransport('/messages', res);
+    await server.connect(transport);
+});
+app.post('/messages', async (req, res) => {
+    await transport.handlePostMessage(req, res);
+});
+```
+
+**After (v2, stateless):**
+
+```typescript
+import { NodeStreamableHTTPServerTransport } from '@modelcontextprotocol/node';
+
+app.all('/mcp', async (req, res) => {
+    const transport = new NodeStreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+    await server.connect(transport);
+    await transport.handleRequest(req, res);
+});
+```
+
+With `sessionIdGenerator: undefined` the transport runs in stateless mode, so creating a fresh instance per request is correct. For stateful sessions, the transport must be created once per session and stored in a `Map<string, NodeStreamableHTTPServerTransport>` keyed by session ID — see `examples/server/src/simpleStreamableHttp.ts` for the full pattern.
+
 ### `WebSocketClientTransport` removed
 
 `WebSocketClientTransport` has been removed. WebSocket is not a spec-defined MCP transport, and keeping it in the SDK encouraged transport proliferation without a conformance baseline.
@@ -381,10 +411,14 @@ Common method string replacements:
 | `ToolListChangedNotificationSchema`     | `'notifications/tools/list_changed'`     |
 | `ResourceListChangedNotificationSchema` | `'notifications/resources/list_changed'` |
 | `PromptListChangedNotificationSchema`   | `'notifications/prompts/list_changed'`   |
+| `GetTaskRequestSchema`                  | `'tasks/get'`                            |
+| `GetTaskPayloadRequestSchema`           | `'tasks/result'`                         |
+| `ElicitationCompleteNotificationSchema` | `'notifications/elicitation/complete'`   |
+| `InitializedNotificationSchema`         | `'notifications/initialized'`            |
 
 ### `Protocol.request()`, `ctx.mcpReq.send()`, and `Client.callTool()` no longer take a schema parameter
 
-The public `Protocol.request()`, `BaseContext.mcpReq.send()`, and `Client.callTool()` methods no longer accept a Zod result schema argument. The SDK now resolves the correct result schema internally based on the method name. This means you no longer need to import result schemas
+The public `Protocol.request()`, `BaseContext.mcpReq.send()`, `Client.callTool()`, and `client.experimental.tasks.callToolStream()` methods no longer accept a Zod result schema argument. The SDK now resolves the correct result schema internally based on the method name. This means you no longer need to import result schemas
 like `CallToolResultSchema` or `ElicitResultSchema` when making requests.
 
 **`client.request()` — Before (v1):**
@@ -440,6 +474,24 @@ const result = await client.callTool({ name: 'my-tool', arguments: {} }, Compati
 const result = await client.callTool({ name: 'my-tool', arguments: {} });
 ```
 
+**`client.experimental.tasks.callToolStream()` — Before (v1):**
+
+```typescript
+import { CallToolResultSchema } from '@modelcontextprotocol/sdk/types.js';
+
+for await (const event of client.experimental.tasks.callToolStream({ name: 'my-tool', arguments: {} }, CallToolResultSchema)) {
+    // ...
+}
+```
+
+**After (v2):**
+
+```typescript
+for await (const event of client.experimental.tasks.callToolStream({ name: 'my-tool', arguments: {} })) {
+    // ...
+}
+```
+
 The return type is now inferred from the method name via `ResultTypeMap`. For example, `client.request({ method: 'tools/call', ... })` returns `Promise<CallToolResult | CreateTaskResult>`.
 
 ### Client list methods return empty results for missing capabilities
@@ -457,21 +509,19 @@ const client = new Client(
 );
 ```
 
-### `InMemoryTransport` removed from public API
+### `InMemoryTransport` import path
 
-`InMemoryTransport` has been removed from the public API surface. It was previously used for in-process client-server connections and testing.
-
-For **testing**, import it directly from the internal core package:
+`InMemoryTransport` is used for testing client/server interactions within a single process. It is re-exported from both `@modelcontextprotocol/server` and `@modelcontextprotocol/client`.
 
 ```typescript
 // v1
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 
-// v2 (testing only — @modelcontextprotocol/core is internal, not for production use)
-import { InMemoryTransport } from '@modelcontextprotocol/core';
+// v2
+import { InMemoryTransport } from '@modelcontextprotocol/server';
 ```
 
-For **production in-process connections**, use `StreamableHTTPClientTransport` with a local server URL, or connect client and server via paired streams.
+For **production in-process connections**, prefer `StreamableHTTPClientTransport` with a local server URL.
 
 ### Removed type aliases and deprecated exports
 
