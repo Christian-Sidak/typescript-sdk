@@ -440,15 +440,15 @@ const elicit = await ctx.mcpReq.send({ method: 'elicitation/create', params: { .
 const tool = await client.callTool({ name: 'my-tool', arguments: {} });
 ```
 
-| v1 call                                                      | v2 call                            |
-| ------------------------------------------------------------ | ---------------------------------- |
-| `client.request(req, ResultSchema)`                          | `client.request(req)`              |
-| `client.request(req, ResultSchema, options)`                 | `client.request(req, options)`     |
+| v1 call                                                                    | v2 call                                                      |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `client.request(req, ResultSchema)`                                        | `client.request(req)`                                        |
+| `client.request(req, ResultSchema, options)`                               | `client.request(req, options)`                               |
 | `client.experimental.tasks.callToolStream(params, ResultSchema, options?)` | `client.experimental.tasks.callToolStream(params, options?)` |
-| `ctx.mcpReq.send(req, ResultSchema)`                         | `ctx.mcpReq.send(req)`             |
-| `ctx.mcpReq.send(req, ResultSchema, options)`                | `ctx.mcpReq.send(req, options)`    |
-| `client.callTool(params, CompatibilityCallToolResultSchema)` | `client.callTool(params)`          |
-| `client.callTool(params, schema, options)`                   | `client.callTool(params, options)` |
+| `ctx.mcpReq.send(req, ResultSchema)`                                       | `ctx.mcpReq.send(req)`                                       |
+| `ctx.mcpReq.send(req, ResultSchema, options)`                              | `ctx.mcpReq.send(req, options)`                              |
+| `client.callTool(params, CompatibilityCallToolResultSchema)`               | `client.callTool(params)`                                    |
+| `client.callTool(params, schema, options)`                                 | `client.callTool(params, options)`                           |
 
 Remove unused schema imports: `CallToolResultSchema`, `CompatibilityCallToolResultSchema`, `ElicitResultSchema`, `CreateMessageResultSchema`, etc., when they were only used in `request()`/`send()`/`callTool()` calls.
 

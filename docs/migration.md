@@ -139,7 +139,8 @@ app.all('/mcp', async (req, res) => {
 });
 ```
 
-With `sessionIdGenerator: undefined` the transport runs in stateless mode, so creating a fresh instance per request is correct. For stateful sessions, the transport must be created once per session and stored in a `Map<string, NodeStreamableHTTPServerTransport>` keyed by session ID — see `examples/server/src/simpleStreamableHttp.ts` for the full pattern.
+With `sessionIdGenerator: undefined` the transport runs in stateless mode, so creating a fresh instance per request is correct. For stateful sessions, the transport must be created once per session and stored in a `Map<string, NodeStreamableHTTPServerTransport>` keyed by session
+ID — see `examples/server/src/simpleStreamableHttp.ts` for the full pattern.
 
 ### `WebSocketClientTransport` removed
 
@@ -472,8 +473,8 @@ example.
 
 ### `Protocol.request()`, `ctx.mcpReq.send()`, and `Client.callTool()` no longer take a schema parameter
 
-The public `Protocol.request()`, `BaseContext.mcpReq.send()`, `Client.callTool()`, and `client.experimental.tasks.callToolStream()` methods no longer accept a Zod result schema argument. The SDK now resolves the correct result schema internally based on the method name. This means you no longer need to import result schemas
-like `CallToolResultSchema` or `ElicitResultSchema` when making requests.
+The public `Protocol.request()`, `BaseContext.mcpReq.send()`, `Client.callTool()`, and `client.experimental.tasks.callToolStream()` methods no longer accept a Zod result schema argument. The SDK now resolves the correct result schema internally based on the method name. This
+means you no longer need to import result schemas like `CallToolResultSchema` or `ElicitResultSchema` when making requests.
 
 **`client.request()` — Before (v1):**
 
