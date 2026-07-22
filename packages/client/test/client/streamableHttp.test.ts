@@ -248,6 +248,114 @@ describe('StreamableHTTPClientTransport', () => {
         expect(errorSpy).toHaveBeenCalled();
     });
 
+    it('should route JSON-RPC error body from a 400 non-2xx response through onmessage', async () => {
+        const request: JSONRPCMessage = {
+            jsonrpc: '2.0',
+            method: 'initialize',
+            params: {
+                protocolVersion: '2025-11-25',
+                capabilities: {},
+                clientInfo: { name: 'test-client', version: '1.0' }
+            },
+            id: 0
+        };
+
+        const jsonRpcErrorBody: JSONRPCMessage = {
+            jsonrpc: '2.0',
+            id: 0,
+            error: {
+                code: -32001,
+                message: 'UCP discovery failed',
+                data: { code: 'invalid_profile_url', content: 'Missing profile uri' }
+            }
+        };
+
+        (globalThis.fetch as Mock).mockResolvedValueOnce({
+            ok: false,
+            status: 400,
+            statusText: 'Bad Request',
+            text: () => Promise.resolve(JSON.stringify(jsonRpcErrorBody)),
+            headers: new Headers()
+        });
+
+        const messageSpy = vi.fn();
+        const errorSpy = vi.fn();
+        transport.onmessage = messageSpy;
+        transport.onerror = errorSpy;
+
+        await transport.start();
+        // send() should resolve — the JSON-RPC error is delivered via onmessage, not thrown
+        await transport.send(request);
+
+        expect(messageSpy).toHaveBeenCalledWith(jsonRpcErrorBody);
+        expect(errorSpy).not.toHaveBeenCalled();
+        expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('should route JSON-RPC error body from a 500 non-2xx response through onmessage', async () => {
+        const request: JSONRPCMessage = {
+            jsonrpc: '2.0',
+            method: 'tools/call',
+            params: { name: 'search', arguments: {} },
+            id: 1
+        };
+
+        const jsonRpcErrorBody: JSONRPCMessage = {
+            jsonrpc: '2.0',
+            id: 1,
+            error: { code: -32603, message: 'Internal error' }
+        };
+
+        (globalThis.fetch as Mock).mockResolvedValueOnce({
+            ok: false,
+            status: 500,
+            statusText: 'Internal Server Error',
+            text: () => Promise.resolve(JSON.stringify(jsonRpcErrorBody)),
+            headers: new Headers()
+        });
+
+        const messageSpy = vi.fn();
+        const errorSpy = vi.fn();
+        transport.onmessage = messageSpy;
+        transport.onerror = errorSpy;
+
+        await transport.start();
+        await transport.send(request);
+
+        expect(messageSpy).toHaveBeenCalledWith(jsonRpcErrorBody);
+        expect(errorSpy).not.toHaveBeenCalled();
+        expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('should still throw SdkError for non-2xx response with a non-JSON-RPC body', async () => {
+        const message: JSONRPCMessage = {
+            jsonrpc: '2.0',
+            method: 'test',
+            params: {},
+            id: 'test-id'
+        };
+
+        (globalThis.fetch as Mock).mockResolvedValueOnce({
+            ok: false,
+            status: 503,
+            statusText: 'Service Unavailable',
+            text: () => Promise.resolve('Service temporarily unavailable'),
+            headers: new Headers()
+        });
+
+        const errorSpy = vi.fn();
+        transport.onerror = errorSpy;
+
+        await transport.start();
+        await expect(transport.send(message)).rejects.toThrow(
+            new SdkError(SdkErrorCode.ClientHttpNotImplemented, 'Error POSTing to endpoint: Service temporarily unavailable', {
+                status: 503,
+                text: 'Service temporarily unavailable'
+            })
+        );
+        expect(errorSpy).toHaveBeenCalled();
+    });
+
     it('should handle non-streaming JSON response', async () => {
         const message: JSONRPCMessage = {
             jsonrpc: '2.0',

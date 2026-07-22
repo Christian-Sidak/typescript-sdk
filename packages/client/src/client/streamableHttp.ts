@@ -629,6 +629,22 @@ export class StreamableHTTPClientTransport implements Transport {
                     }
                 }
 
+                // If the body is a well-formed JSON-RPC error response, route it through
+                // onmessage (same path as a 200-OK JSON-RPC error) so the protocol layer
+                // rejects the pending request with a typed ProtocolError — callers can then
+                // inspect error.code / error.data without string-parsing SdkError.data.text.
+                if (text) {
+                    try {
+                        const parsed = JSONRPCMessageSchema.parse(JSON.parse(text));
+                        if (isJSONRPCErrorResponse(parsed)) {
+                            this.onmessage?.(parsed);
+                            return;
+                        }
+                    } catch {
+                        // Not a valid JSON-RPC error response — fall through to SdkError below.
+                    }
+                }
+
                 throw new SdkError(SdkErrorCode.ClientHttpNotImplemented, `Error POSTing to endpoint: ${text}`, {
                     status: response.status,
                     text
